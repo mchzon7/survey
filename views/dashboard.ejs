@@ -17,6 +17,7 @@
   </nav>
 
   <main class="container mx-auto p-6 flex-grow">
+    <!-- Balance & Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
       <div class="bg-white p-6 rounded-lg shadow-sm border border-slate-200">
         <p class="text-slate-500 text-sm font-medium">Available Balance</p>
@@ -32,15 +33,50 @@
       </div>
     </div>
 
+    <!-- Native JSON Offer Grid Section -->
     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
-      <h3 class="text-lg font-bold text-slate-800 mb-4">Complete Surveys & Offers</h3>
-      <div class="w-full h-[750px] border rounded overflow-hidden">
-        <iframe 
-          src="https://timewall.io/offerwall?api_key=<%= timewallApiKey %>&user_id=<%= user._id %>" 
-          class="w-full h-full border-0" 
-          title="Timewall Offerwall">
-        </iframe>
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xl font-bold text-slate-800">Available Tasks & Surveys</h3>
+        <span class="text-sm bg-blue-50 text-blue-700 font-medium px-3 py-1 rounded-full"><%= offers.length %> Active Offers</span>
       </div>
+
+      <% if (offers.length === 0) { %>
+        <div class="text-center py-12 border-2 border-dashed border-slate-200 rounded-lg">
+          <p class="text-slate-500 font-medium">No offers available right now. Please check back later!</p>
+        </div>
+      <% } else { %>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <% offers.forEach(function(offer) { %>
+            <div class="border border-slate-200 rounded-xl p-5 hover:shadow-md transition flex flex-col justify-between bg-white">
+              <div>
+                <div class="flex items-center space-x-3 mb-3">
+                  <img src="<%= offer.icon_url || 'https://via.placeholder.com/48' %>" alt="Offer Icon" class="w-12 h-12 rounded-lg object-cover bg-slate-100">
+                  <div>
+                    <h4 class="font-bold text-slate-800 line-clamp-1"><%= offer.title || offer.name %></h4>
+                    <span class="text-xs bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded"><%= offer.category || 'Survey' %></span>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-500 mb-4 line-clamp-2"><%= offer.description || 'Complete this task to earn points.' %></p>
+              </div>
+
+              <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <span class="block text-xs text-slate-400 font-medium">Reward</span>
+                  <span class="text-lg font-extrabold text-green-600">+<%= offer.points || offer.reward %> PTS</span>
+                </div>
+                <a 
+                  href="<%= offer.click_url || offer.url %>" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-lg transition"
+                >
+                  Start Task
+                </a>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } %>
     </div>
   </main>
 </body>
