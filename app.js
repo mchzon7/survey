@@ -23,18 +23,22 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Express Session Configuration
+// Use MongoStore default export or standard constructor fallback
+const mongoStoreOptions = {
+  mongoUrl: process.env.MONGO_URI,
+  ttl: 14 * 24 * 60 * 60 // 14 days
+};
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your_session_secret_key',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGO_URI, // Uses your existing MongoDB Connection String
-    ttl: 14 * 24 * 60 * 60 // 14 days session expiration
-  }),
+  store: (typeof MongoStore.create === 'function') 
+    ? MongoStore.create(mongoStoreOptions) 
+    : new MongoStore(mongoStoreOptions),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-    secure: process.env.NODE_ENV === 'production', // true on HTTPS/Render
+    secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax'
   }
 }));
