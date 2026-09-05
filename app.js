@@ -3,7 +3,6 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const connectDB = require('./config/db');
-const session = require('express-session');
 const MongoStore = require('connect-mongo');
 
 const authRoutes = require('./routes/authRoutes');
