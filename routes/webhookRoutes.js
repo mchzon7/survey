@@ -1,60 +1,68 @@
 const express = require('express');
-const crypto = require('crypto');
+const mongoose = require('mongoose');
 const User = require('../models/User');
 const PointLog = require('../models/PointLog');
 
 const router = express.Router();
 
-router.post('/api/webhooks/timewall', async (req, res) => {
+router.all('/api/webhooks/timewall', async (req, res) => {
   try {
-    const { user_id, points, tx_id, signature } = req.body;
+    const payload = { ...req.query, ...req.body };
 
-    // Optional Timewall HMAC Verification if signature provided
-    if (signature && process.env.TIMEWALL_SECRET_KEY) {
-      const computedSignature = crypto
-        .createHmac('sha256', process.env.TIMEWALL_SECRET_KEY)
-        .update(`${user_id}:${points}:${tx_id}`)
-        .digest('hex');
+    // Extract values matching TimeWall's exact template
+    const userIdStr = payload.userid;
+    const externalTxId = payload.txid;
+    const pointsAmount = parseFloat(payload.currency);
+    const type = payload.type; // e.g., 'credit' or 'chargeback/reversal'
 
-      if (computedSignature !== signature) {
-        return res.status(400).json({ error: 'Invalid Webhook Signature' });
-      }
+    console.log('TimeWall Postback Payload Received:', payload);
+
+    if (!userIdStr || !externalTxId || isNaN(pointsAmount)) {
+      console.error('Invalid Postback Data:', payload);
+      return res.status(400).send('ERROR: Missing required fields');
     }
 
-    const pointsParsed = parseFloat(points);
-    if (!user_id || isNaN(pointsParsed) || !tx_id) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    if (!mongoose.Types.ObjectId.isValid(userIdStr)) {
+      console.error(`Invalid User ID format: ${userIdStr}`);
+      return res.status(400).send('ERROR: Invalid User ID');
     }
 
-    // Check duplicate credited postback
-    const existingLog = await PointLog.findOne({ externalTxId: tx_id });
+    // Prevent duplicate processing
+    const existingLog = await PointLog.findOne({ externalTxId: String(externalTxId) });
     if (existingLog) {
-      return res.status(200).json({ message: 'Transaction already processed' });
+      console.log(`Transaction ${externalTxId} already processed.`);
+      return res.status(200).send('1');
     }
 
-    // Idempotent point credit
+    // Handle Chargebacks/Reversals if sent by TimeWall
+    const pointsToApply = (type && type.toLowerCase() === 'chargeback') ? -Math.abs(pointsAmount) : pointsAmount;
+
+    // Credit/Deduct points in MongoDB
     const updatedUser = await User.findByIdAndUpdate(
-      user_id,
-      { $inc: { points: pointsParsed } },
+      userIdStr,
+      { $inc: { points: pointsToApply } },
       { new: true }
     );
 
     if (!updatedUser) {
-      return res.status(404).json({ error: 'User not found' });
+      console.error(`User not found: ${userIdStr}`);
+      return res.status(404).send('ERROR: User not found');
     }
 
-    // Record Point Log
+    // Record the transaction log
     await PointLog.create({
-      userId: user_id,
-      points: pointsParsed,
+      userId: updatedUser._id,
+      points: pointsToApply,
       source: 'TIMEWALL',
-      externalTxId: tx_id
+      externalTxId: String(externalTxId)
     });
 
-    return res.status(200).json({ status: 'success' });
+    console.log(`Successfully updated ${pointsToApply} points for ${updatedUser.username}`);
+    return res.status(200).send('1');
+
   } catch (error) {
-    console.error('Webhook Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    console.error('TimeWall Webhook Error:', error);
+    return res.status(500).send('ERROR: Internal Server Error');
   }
 });
 
