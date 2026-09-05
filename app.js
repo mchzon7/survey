@@ -3,6 +3,8 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const connectDB = require('./config/db');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -23,17 +25,20 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Express Session Configuration
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || 'fallback_secret',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24, // 1 Day
-      httpOnly: true
-    }
-  })
-);
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your_session_secret_key',
+  resave: false,
+  saveUninitialized: false,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URI, // Uses your existing MongoDB Connection String
+    ttl: 14 * 24 * 60 * 60 // 14 days session expiration
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    secure: process.env.NODE_ENV === 'production', // true on HTTPS/Render
+    sameSite: 'lax'
+  }
+}));
 
 // Route Declarations
 app.use(authRoutes);
