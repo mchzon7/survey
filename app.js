@@ -3,7 +3,12 @@ const express = require('express');
 const session = require('express-session');
 const path = require('path');
 const connectDB = require('./config/db');
-const MongoStore = require('connect-mongo');
+let MongoStore = require('connect-mongo');
+
+// Resolve CommonJS export structure for connect-mongo v6
+if (MongoStore.default) {
+  MongoStore = MongoStore.default;
+}
 
 const authRoutes = require('./routes/authRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -24,18 +29,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Use MongoStore default export or standard constructor fallback
-const mongoStoreOptions = {
-  mongoUrl: process.env.MONGO_URI,
-  ttl: 14 * 24 * 60 * 60 // 14 days
-};
 
 app.use(session({
   secret: process.env.SESSION_SECRET || 'your_session_secret_key',
   resave: false,
   saveUninitialized: false,
-  store: (typeof MongoStore.create === 'function') 
-    ? MongoStore.create(mongoStoreOptions) 
-    : new MongoStore(mongoStoreOptions),
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 14 * 24 * 60 * 60 // 14 days
+  }),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     secure: process.env.NODE_ENV === 'production',
