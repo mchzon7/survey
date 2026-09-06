@@ -17,6 +17,12 @@ const webhookRoutes = require('./routes/webhookRoutes');
 
 const app = express();
 
+// Render terminates HTTPS at its reverse proxy. Trust the proxy so
+// express-session can safely send Secure cookies to the browser.
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Database Connection
 connectDB();
 
@@ -31,7 +37,7 @@ app.use(express.urlencoded({ extended: true }));
 // Use MongoStore default export or standard constructor fallback
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'your_session_secret_key',
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
@@ -41,6 +47,7 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
     sameSite: 'lax'
   }
 }));

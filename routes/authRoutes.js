@@ -12,7 +12,8 @@ router.get('/register', (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
     
     const existingUser = await User.findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
@@ -28,8 +29,15 @@ router.post('/register', async (req, res) => {
 
     await user.save();
     req.session.userId = user._id;
-    res.redirect('/dashboard');
+    req.session.save((sessionError) => {
+      if (sessionError) {
+        console.error('Registration session save error:', sessionError);
+        return res.status(500).render('register', { error: 'Account created, but login could not be started.' });
+      }
+      res.redirect('/dashboard');
+    });
   } catch (error) {
+    console.error('Registration error:', error);
     res.render('register', { error: 'Error creating account. Try again.' });
   }
 });
@@ -40,7 +48,8 @@ router.get('/login',(req, res) => {
 
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const email = String(req.body.email || '').trim().toLowerCase();
+    const password = String(req.body.password || '');
     const user = await User.findOne({ email });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -48,8 +57,15 @@ router.post('/login', async (req, res) => {
     }
 
     req.session.userId = user._id;
-    res.redirect('/dashboard');
+    req.session.save((sessionError) => {
+      if (sessionError) {
+        console.error('Login session save error:', sessionError);
+        return res.status(500).render('login', { error: 'Login could not be completed. Please try again.' });
+      }
+      res.redirect('/dashboard');
+    });
   } catch (error) {
+    console.error('Login error:', error);
     res.render('login', { error: 'Login error occurred.' });
   }
 });
