@@ -14,6 +14,9 @@ const pointLogSchema = new mongoose.Schema({
     type: String,
     required: true // e.g., 'TIMEWALL', 'WITHDRAWAL_REFUND', 'WITHDRAWAL_DEDUCTION', 'BONUS'
   },
+  description: {
+    type: String
+  },
   externalTxId: {
     type: String,
     sparse: true,
