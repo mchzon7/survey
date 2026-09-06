@@ -4,16 +4,13 @@ const User = require('../models/User');
 const router = express.Router();
 
 // Middleware to redirect logged in users
-const redirectIfAuth = (req, res, next) => {
-  if (req.session.userId) return res.redirect('/dashboard');
-  next();
-};
+
 
 router.get('/register', (req, res) => {
   res.render('register', { error: null });
 });
 
-router.post('/register', redirectIfAuth, async (req, res) => {
+router.post('/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
     
@@ -41,7 +38,7 @@ router.get('/login',(req, res) => {
   res.render('login', { error: null });
 });
 
-router.post('/login', redirectIfAuth, async (req, res) => {
+router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email });
