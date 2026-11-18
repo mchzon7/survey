@@ -22,6 +22,9 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  ddd: {
+    type: String,
+  },
   totalWithdrawn: {
     type: Number,
     default: 0
